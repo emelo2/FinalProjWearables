@@ -1,7 +1,7 @@
 import controlP5.*;
 import processing.serial.*;
 import java.util.HashMap;
-import java.time.Clock;
+import java.time.*;
 import java.lang.Math.*;
 
 ControlP5 cp5;
@@ -11,35 +11,45 @@ controlP5.Textarea serialTxt;
 controlP5.Textarea  light, buzzer;
 CheckBox checkbox;
 
-
+int frameNumber = 0;
+float maxLastTen = -1;
+LocalTime alarmTime;
 BufferedReader reader;
 boolean use_file = true, val_changed = true;
 
 float inByte = 0;
 Chart sleepChart, liveChart ;
 String textValue = "";
-
-long start_time;
 HashMap<String, Integer> colors;
-
 int hours, min;
 
 
 void setup() {
- /* reader = createReader("sleep_data.txt");
+  reader = createReader("sleep_data.txt");
   if (use_file) {
     try {
       use_file = reader.ready();
+      println("Using file");
     } catch (Exception e) {
+      println("Error using file");
       e.printStackTrace();
       use_file = false;
     }
-  }*/
-  frameRate(100);
+  }
+  
+  if (!use_file) {
+    println("Trying to use serial port");
+    try {
+    myPort = new Serial(this, Serial.list()[0], 9600);
+    myPort.bufferUntil('\n');
+    } catch (Exception e) {
+      serialTxt.setText("NO SERIAL");
+    }
+   }
+  frameRate(1000);
   
   cp5 = new ControlP5(this);
   time = Clock.systemUTC();
-  start_time = time.millis();
   colors = new HashMap<String, Integer>();
   colors.put("red", #FF0000);
   colors.put("orange", #FFA500);
@@ -68,11 +78,12 @@ void setup() {
                .setStrokeWeight(2.5)
                ;
 
-
   sleepChart.addDataSet("sleep");
-  sleepChart.setData("sleep", new float[490]);
+  sleepChart.setData("sleep", new float[3240]);
   sleepChart.setColors("sleep",#FFFFFF);
   sleepChart.getColor().setBackground(#000000);
+  liveChart.addDataSet("sleep");
+  liveChart.setData("sleep", new float[600]);
   size(1200,615);
   background(0x444444);
  
@@ -80,19 +91,15 @@ void setup() {
   /***************************************************************************************************/
   /***************************************************************************************************/
 
- cp5.addTextfield("Time")
-     .setPosition(950, 40)
-     .setSize(150,30)
-     .setAutoClear(false)
-     .setFont(font)
-     .getCaptionLabel()
-     .setFont(font)
-     ;
-     
-     
-     
-       
-checkbox = cp5.addCheckBox("checkBox")
+  cp5.addTextfield("Time")
+    .setPosition(950, 40)
+    .setSize(150,30)
+    .setAutoClear(false)
+    .setFont(font)
+    .getCaptionLabel()
+    .setFont(font)
+    ;
+  checkbox = cp5.addCheckBox("checkBox")
                 .setPosition(950, 150)
                 .setSize(40, 40)
                 .setItemsPerRow(1)
@@ -111,48 +118,41 @@ checkbox = cp5.addCheckBox("checkBox")
   /***************************************************************************************************/
   /***************************************************************************************************/
    
-  /* if (!use_file) {
-    println("Trying to use serial port");
-    try {
-    myPort = new Serial(this, Serial.list()[0], 9600);
-    myPort.bufferUntil('\n');
-    } catch (Exception e) {
-      serialTxt.setText("NO SERIAL");
-    }
-   } else {
-    println("Using file");
-  }*/
+  
 }
-
 
 
 void draw() {
   background(0x444444);
+  if (use_file) {
+    readFromFile();
+  }
   
+  if (inByte > maxLastTen) {
+    maxLastTen = inByte;
+  }
   
-  /*if (use_file) {
-    for (int i = 0; i < 5; ++i)
-      readFromFile();
-  }*/  
-
-     sleepChart.push("sleep", inByte); 
+  if (frameNumber % 100 == 0) {
+    sleepChart.push("sleep", maxLastTen);
+    maxLastTen = -1;
+  }
+  liveChart.push("sleep", inByte);
+  frameNumber++;
 }
 
 
 void readFromFile() {
-     try {
-      String line = reader.readLine();
-      
-      String sleepString = line;
-      inByte = float(sleepString);
-      if (!Float.isNaN(inByte))
-        val_changed = true;
-      
-    } catch (Exception e) {
-      e.printStackTrace();
-      reader = createReader("sleep_data.txt");
-      val_changed = false;
-    }
+  try {
+    String line = reader.readLine();
+    String sleepString = line;
+    inByte = float(sleepString);
+    if (!Float.isNaN(inByte))
+      val_changed = true;
+  } catch (Exception e) {
+    e.printStackTrace();
+    reader = createReader("sleep_data.txt");
+    val_changed = false;
+  }
 }
 
    /***************************************************************************************************/
@@ -163,7 +163,7 @@ void serialEvent (Serial myPort) {
   // get the ASCII string:
   // get the ASCII string:
   String inString = myPort.readStringUntil('\n');
-
+  println("Received serial data: "+inString);
   if (inString != null) {
     // trim off any whitespace:
     
@@ -193,18 +193,22 @@ void serialEvent (Serial myPort) {
   /*******************EVENT HANDLERS********************************************************************************/
   /***************************************************************************************************/
 
+
+
 public void controlEvent(ControlEvent theEvent) {
-  
-  
-  
+
 }
 
 
-public void Age(String theText) {
+public void Time(String theText) {
   // automatically receives results from controller input
-  println("a textfield event for controller 'Age' : "+theText);
+  println("a textfield event for controller 'Time' : "+theText);
   String array[] = theText.split(":");
   hours = int(array[0]);
+  String minString = array[1];
+  String amPm = minString.substring(2);
+  minString = minString.substring(0, 2);
   min = int(array[1]);
 
+  alarmTime = LocalTime.parse(theText);
 }
