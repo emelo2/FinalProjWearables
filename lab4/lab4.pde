@@ -23,6 +23,10 @@ String textValue = "";
 HashMap<String, Integer> colors;
 int hours, min;
 
+boolean rem;
+int endBlockHour;
+int endBlockMin;
+LocalTime blockTime;
 
 void setup() {
   reader = createReader("sleep_data.txt");
@@ -211,4 +215,25 @@ public void Time(String theText) {
   min = int(array[1]);
 
   alarmTime = LocalTime.parse(theText);
+}
+
+public void blockTime(){
+  
+ endBlockHour = hours - 2;
+ blockTime = LocalTime.of(endBlockHour, min);
+ 
+ 
+}
+
+public void sendAlarmTrigger(){
+  int h = hour();
+  int m = minute();
+  LocalTime time = LocalTime.of(h,m);
+  
+  if(alarmTime.compareTo(time)> 0 && blockTime.compareTo(time)< 0){
+    
+    myPort.write(0);
+    
+  } 
+
 }
