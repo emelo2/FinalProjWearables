@@ -23,10 +23,12 @@ String textValue = "";
 HashMap<String, Integer> colors;
 int hours, min;
 
-boolean rem;
+boolean rem = false, afterRem = false, alarmSet = false;
 int endBlockHour;
 int endBlockMin;
 LocalTime blockTime;
+long time2 = 0;
+
 
 void setup() {
   reader = createReader("sleep_data.txt");
@@ -142,6 +144,23 @@ void draw() {
   }
   liveChart.push("sleep", inByte);
   frameNumber++;
+  
+  if (inByte == 1023 && alarmSet){
+    rem = true;
+    
+  }
+  
+  if (rem && inByte != 1023){
+    rem = false;
+    afterRem = true;
+    time2 = time.millis();
+  }
+  ;
+  if(afterRem && (time.millis() - time2 > 60) ){
+    sendAlarmTrigger();
+  
+  }
+  
 }
 
 
@@ -213,6 +232,8 @@ public void Time(String theText) {
   String amPm = minString.substring(2);
   minString = minString.substring(0, 2);
   min = int(array[1]);
+  
+  blockTime();
 
   alarmTime = LocalTime.parse(theText);
 }
@@ -221,6 +242,8 @@ public void blockTime(){
   
  endBlockHour = hours - 2;
  blockTime = LocalTime.of(endBlockHour, min);
+   alarmSet = true;
+
  
  
 }
