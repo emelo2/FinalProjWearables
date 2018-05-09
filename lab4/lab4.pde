@@ -50,8 +50,8 @@ void setup () {
   if ( !use_file ) {
     println("Trying to use serial port");
     try {
-    myPort = new Serial(this, Serial.list()[0], 9600);
-    myPort.bufferUntil('\n');
+      myPort = new Serial(this, Serial.list()[0], 9600);
+      myPort.bufferUntil('\n');
     } catch (Exception e) {
     }
    }
@@ -59,16 +59,7 @@ void setup () {
   
   cp5 = new ControlP5(this);
   time = Clock.systemUTC();
-  colors = new HashMap<String, Integer>();
-  colors.put("red", #FF0000);
-  colors.put("orange", #FFA500);
-  colors.put("green", #00FF00);
-  colors.put("blue", #00BFFF);
-  colors.put("grey", #F0F8FF);
-  colors.put("pink", #FFB6C1);
-  colors.put("white", #FFFFFF);
-  
-  
+   
   PFont pfont = createFont("arial",30);
   ControlFont font = new ControlFont(pfont,18);
 
@@ -133,13 +124,13 @@ void setup () {
       .setPosition(50, 50)
       .setFont(font)
       .setValue("Current Status");
+  
+  REMStatus.setText("Deep Sleep");
 }
 
 void draw () {
   background(0x444444);
   
-  REMStatus.setText("Deep Sleep");
-
   if (use_file && !sendBuzzerTrigger) {
     readFromFile();
   }
@@ -169,6 +160,7 @@ void draw () {
     isAfterRem = true;
     endOfRemTime = frameNumber;
     println("rem may have ended");
+    REMStatus.setText("REM Cycle");
   }
 
   if (isAfterRem && (frameNumber - endOfRemTime >= 50)) {
