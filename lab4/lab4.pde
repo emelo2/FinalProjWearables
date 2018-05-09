@@ -257,6 +257,8 @@ public void sendAlarmTrigger(){
     
     myPort.write(0);
     
+    //hi
+    
   } 
 
 }
