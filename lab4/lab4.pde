@@ -23,7 +23,7 @@ String textValue = "";
 HashMap<String, Integer> colors;
 int hours, min;
 
-boolean rem = false, isAfterRem = false, alarmSet = false;
+boolean rem = false, isAfterRem = false, alarmSet = false, sendTrigger = false;
 int endBlockHour;
 int endBlockMin;
 LocalTime detectionStartTime;
@@ -135,17 +135,22 @@ void draw () {
   liveChart.push("sleep", inByte);
   frameNumber++;
 
-  if (inByte == 1023 && alarmSet){
+  if (inByte >700 && alarmSet){
     rem = true;
+    isAfterRem = false;
+    println("alarm set and over 700");
   }
 
   if (rem && inByte != 1023){
     rem = false;
     isAfterRem = true;
     endOfRemTime = time.millis();
+    println("maybe not in rem");
   }
 
-  if (isAfterRem && (time.millis() - endOfRemTime > 60)) {
+  if (isAfterRem && (time.millis() - endOfRemTime >= 60)) {
+    println(time.millis() - endOfRemTime);
+    println("after rem");
     sendAlarmTrigger();
   }
 }
@@ -192,6 +197,11 @@ void serialEvent (Serial myPort) {
      inByte = map(inByte, 0, 1023, 0, height);
      // at the edge of the screen, go back to the beginning:
      val_changed = true;   
+     
+     if(sendTrigger){
+       myPort.write("x");
+     
+     }
   }
 }
 
@@ -220,7 +230,7 @@ public void Time (String theText) {
   min = int(array[1]);
 
   setAlarm();
-  alarmTime = LocalTime.parse(theText);
+  alarmTime = LocalTime.of(hours, min);
 }
 
 public void setAlarm () {
@@ -232,10 +242,13 @@ public void setAlarm () {
 public void sendAlarmTrigger () {
   int h = hour();
   int m = minute();
-  LocalTime currentTime = LocalTime.of(h, m);
-
-  if (alarmTime.compareTo(currentTime) > 0 && detectionStartTime.compareTo(currentTime) < 0) {
-    myPort.write(0);
+  LocalTime currentTime = LocalTime.of(h,m);
+  println(currentTime);
+  println(alarmTime);
+  
+  if(alarmTime.compareTo(currentTime)> 0 && detectionStartTime.compareTo(currentTime)< 0){
+    sendTrigger = true;    
+    println("sending");
     //hi
   }
 }
