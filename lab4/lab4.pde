@@ -10,6 +10,7 @@ Serial myPort;
 controlP5.Textarea serialTxt;
 controlP5.Textarea  light, buzzer;
 CheckBox checkbox;
+controlP5.Textlabel REMStatus; 
 
 int frameNumber = 0;
 float maxLastTen = -1;
@@ -121,10 +122,17 @@ void setup () {
       .addItem("buzz", 0)
       .addItem("light", 50)
       ;
+      
+ REMStatus =      cp5.addTextlabel("REM")
+      .setPosition(50, 50)
+      .setFont(font)
+      .setValue("Current Status");
 }
 
 void draw () {
   background(0x444444);
+  
+  REMStatus.setText("Deep Sleep");
 
   if (use_file) {
     readFromFile();
@@ -147,6 +155,7 @@ void draw () {
     //myPort.write("w");
     isAfterRem = false;
     println("eye movement detected");
+    REMStatus.setText("REM Cycle");
   }
 
   if (rem && inByte <= 600) {
@@ -159,6 +168,7 @@ void draw () {
   if (isAfterRem && (frameNumber - endOfRemTime >= 150)) {
     println(frameNumber - endOfRemTime);
     println("rem cycle ended");
+    REMStatus.setText("REM Cycle Ended, WAKE UP!");
     sendAlarmTrigger();
   }
 
