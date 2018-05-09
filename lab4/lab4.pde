@@ -23,7 +23,7 @@ String textValue = "";
 HashMap<String, Integer> colors;
 int hours, min;
 
-boolean rem = false, isAfterRem = false, alarmSet = false, sendTrigger = false;
+boolean rem = false, isAfterRem = false, alarmSet = false, sendTrigger = false, buzzerCheckbox = false, lightCheckbox = false;
 int endBlockHour;
 int endBlockMin;
 LocalTime detectionStartTime;
@@ -216,8 +216,23 @@ void serialEvent (Serial myPort) {
 
 public void controlEvent (ControlEvent theEvent) {
 
+    if(theEvent.isFrom(checkbox)){
+      
+      for(int i = 0; i < checkbox.getArrayValue().length ; i++){ 
+        
+      int n = (int)checkbox.getArrayValue()[i];
+      if(n == 1){
+        if(checkbox.getItem(i).getName() == "buzz"){
+          buzzerCheckbox = true;
+        }
+        else{
+          lightCheckbox = true;
+        }
+      }
+      
+    }
 }
-
+}
 
 public void Time (String theText) {
   // automatically receives results from controller input
