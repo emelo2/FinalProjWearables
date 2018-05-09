@@ -17,20 +17,21 @@ LocalTime alarmTime;
 BufferedReader reader;
 boolean use_file = true, val_changed = true;
 
+int speedUp = 1;
 float inByte = 0;
 Chart sleepChart, liveChart ;
 String textValue = "";
 HashMap<String, Integer> colors;
 int hours, min;
 
-boolean rem = false, isAfterRem = false, alarmSet = false, sendTrigger = false;
+boolean rem = false, isAfterRem = false, alarmSet = true, sendTrigger = false;
 int endBlockHour;
 int endBlockMin;
 LocalTime detectionStartTime;
 long endOfRemTime = 0;
 
 void setup () {
-  reader = createReader("sleep_data.txt");
+  reader = createReader("RealFakeData.txt");
   if ( use_file ) {
     try {
       use_file = reader.ready();
@@ -51,7 +52,7 @@ void setup () {
       serialTxt.setText("NO SERIAL");
     }
    }
-  frameRate(1000);
+  frameRate(speedUp*5);
   
   cp5 = new ControlP5(this);
   time = Clock.systemUTC();
@@ -71,14 +72,14 @@ void setup () {
   sleepChart = cp5.addChart("sleep chart")
                .setPosition(20, 15)
                .setSize(900, 575)
-               .setRange(1023-900, 900)
+               .setRange(0, 1450)
                .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
                .setStrokeWeight(2.5)
                ;
   liveChart = cp5.addChart("live chart")
                .setPosition(950, 350)
                .setSize(200, 200)
-               .setRange(1023-900, 900)
+               .setRange(0, 1450)
                .setView(Chart.LINE) // use Chart.LINE, Chart.PIE, Chart.AREA, Chart.BAR_CENTERED
                .setStrokeWeight(2.5)
                ;
@@ -88,18 +89,24 @@ void setup () {
   sleepChart.setColors("sleep",#FFFFFF);
   sleepChart.getColor().setBackground(#000000);
   liveChart.addDataSet("sleep");
-  liveChart.setData("sleep", new float[600]);
+  liveChart.setData("sleep", new float[150]);
   size(1200,615);
   background(0x444444);
  
   /***************************************************************************************************/
   /***************************************************************************************************/
   /***************************************************************************************************/
-
+  int h = hour();
+  int m = minute() + 30;
+  if (m > 59) {
+    m -= 60;
+    h++;
+  }
   cp5.addTextfield("Time")
     .setPosition(950, 40)
     .setSize(150,30)
     .setAutoClear(false)
+    .setText(h+":"+m)
     .setFont(font)
     .getCaptionLabel()
     .setFont(font)
@@ -127,7 +134,7 @@ void draw () {
     maxLastTen = inByte;
   }
 
-  if (frameNumber % 100 == 0) {
+  if (frameNumber % 1 == 0) {
     sleepChart.push("sleep", maxLastTen);
     maxLastTen = -1;
   }
@@ -135,23 +142,29 @@ void draw () {
   liveChart.push("sleep", inByte);
   frameNumber++;
 
-  if (inByte >700 && alarmSet){
+  if (inByte > 600 && alarmSet){
     rem = true;
+    //myPort.write("w");
     isAfterRem = false;
-    println("alarm set and over 700");
+    println("eye movement detected");
   }
 
-  if (rem && inByte != 1023){
+  if (rem && inByte <= 600) {
     rem = false;
     isAfterRem = true;
-    endOfRemTime = time.millis();
-    println("maybe not in rem");
+    endOfRemTime = frameNumber;
+    println("rem may have ended");
   }
 
-  if (isAfterRem && (time.millis() - endOfRemTime >= 60)) {
-    println(time.millis() - endOfRemTime);
-    println("after rem");
+  if (isAfterRem && (frameNumber - endOfRemTime >= 150)) {
+    println(frameNumber - endOfRemTime);
+    println("rem cycle ended");
     sendAlarmTrigger();
+  }
+
+  if( sendTrigger ){
+    // myPort.write("x");
+    println("Writing to arduino");
   }
 }
 
@@ -163,8 +176,8 @@ void readFromFile () {
     if (!Float.isNaN(inByte))
       val_changed = true;
   } catch (Exception e) {
-    e.printStackTrace();
-    reader = createReader("sleep_data.txt");
+    //e.printStackTrace();
+    reader = createReader("RealFakeData.txt");
     val_changed = false;
   }
 }
@@ -197,11 +210,6 @@ void serialEvent (Serial myPort) {
      inByte = map(inByte, 0, 1023, 0, height);
      // at the edge of the screen, go back to the beginning:
      val_changed = true;   
-     
-     if(sendTrigger){
-       myPort.write("x");
-     
-     }
   }
 }
 
@@ -236,6 +244,9 @@ public void Time (String theText) {
 public void setAlarm () {
   endBlockHour = hours - 2;
   detectionStartTime = LocalTime.of(endBlockHour, min);
+  println("Alarm is set");
+  print("Detection start time is ");
+  println(detectionStartTime);
   alarmSet = true;
 }
 
@@ -244,10 +255,10 @@ public void sendAlarmTrigger () {
   int m = minute();
   LocalTime currentTime = LocalTime.of(h,m);
   println(currentTime);
-  println(alarmTime);
+  //println(alarmTime);
   
-  if(alarmTime.compareTo(currentTime)> 0 && detectionStartTime.compareTo(currentTime)< 0){
-    sendTrigger = true;    
+  if(true && alarmTime.compareTo(currentTime)> 0 && detectionStartTime.compareTo(currentTime)< 0){
+    sendTrigger = true;
     println("sending");
     //hi
   }
