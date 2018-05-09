@@ -23,16 +23,15 @@ String textValue = "";
 HashMap<String, Integer> colors;
 int hours, min;
 
-boolean rem = false, afterRem = false, alarmSet = false;
+boolean rem = false, isAfterRem = false, alarmSet = false;
 int endBlockHour;
 int endBlockMin;
-LocalTime blockTime;
-long time2 = 0;
+LocalTime detectionStartTime;
+long endOfRemTime = 0;
 
-
-void setup() {
+void setup () {
   reader = createReader("sleep_data.txt");
-  if (use_file) {
+  if ( use_file ) {
     try {
       use_file = reader.ready();
       println("Using file");
@@ -43,7 +42,7 @@ void setup() {
     }
   }
   
-  if (!use_file) {
+  if ( !use_file ) {
     println("Trying to use serial port");
     try {
     myPort = new Serial(this, Serial.list()[0], 9600);
@@ -105,66 +104,53 @@ void setup() {
     .getCaptionLabel()
     .setFont(font)
     ;
-  checkbox = cp5.addCheckBox("checkBox")
-                .setPosition(950, 150)
-                .setSize(40, 40)
-                .setItemsPerRow(1)
-                .setSpacingColumn(30)
-                .setSpacingRow(20)
-                .addItem("buzz", 0)
-                .addItem("light", 50)
-                ;
-                
-                
-                
-
-
-
-  /***************************************************************************************************/
-  /***************************************************************************************************/
-  /***************************************************************************************************/
-   
-  
+  checkbox = 
+    cp5.addCheckBox("checkBox")
+      .setPosition(950, 150)
+      .setSize(40, 40)
+      .setItemsPerRow(1)
+      .setSpacingColumn(30)
+      .setSpacingRow(20)
+      .addItem("buzz", 0)
+      .addItem("light", 50)
+      ;
 }
 
-
-void draw() {
+void draw () {
   background(0x444444);
+
   if (use_file) {
     readFromFile();
   }
-  
+
   if (inByte > maxLastTen) {
     maxLastTen = inByte;
   }
-  
+
   if (frameNumber % 100 == 0) {
     sleepChart.push("sleep", maxLastTen);
     maxLastTen = -1;
   }
+
   liveChart.push("sleep", inByte);
   frameNumber++;
-  
+
   if (inByte == 1023 && alarmSet){
     rem = true;
-    
   }
-  
+
   if (rem && inByte != 1023){
     rem = false;
-    afterRem = true;
-    time2 = time.millis();
+    isAfterRem = true;
+    endOfRemTime = time.millis();
   }
-  ;
-  if(afterRem && (time.millis() - time2 > 60) ){
+
+  if (isAfterRem && (time.millis() - endOfRemTime > 60)) {
     sendAlarmTrigger();
-  
   }
-  
 }
 
-
-void readFromFile() {
+void readFromFile () {
   try {
     String line = reader.readLine();
     String sleepString = line;
@@ -218,12 +204,12 @@ void serialEvent (Serial myPort) {
 
 
 
-public void controlEvent(ControlEvent theEvent) {
+public void controlEvent (ControlEvent theEvent) {
 
 }
 
 
-public void Time(String theText) {
+public void Time (String theText) {
   // automatically receives results from controller input
   println("a textfield event for controller 'Time' : "+theText);
   String array[] = theText.split(":");
@@ -232,33 +218,24 @@ public void Time(String theText) {
   String amPm = minString.substring(2);
   minString = minString.substring(0, 2);
   min = int(array[1]);
-  
-  blockTime();
 
+  setAlarm();
   alarmTime = LocalTime.parse(theText);
 }
 
-public void blockTime(){
-  
- endBlockHour = hours - 2;
- blockTime = LocalTime.of(endBlockHour, min);
-   alarmSet = true;
-
- 
- 
+public void setAlarm () {
+  endBlockHour = hours - 2;
+  detectionStartTime = LocalTime.of(endBlockHour, min);
+  alarmSet = true;
 }
 
-public void sendAlarmTrigger(){
+public void sendAlarmTrigger () {
   int h = hour();
   int m = minute();
-  LocalTime time = LocalTime.of(h,m);
-  
-  if(alarmTime.compareTo(time)> 0 && blockTime.compareTo(time)< 0){
-    
-    myPort.write(0);
-    
-    //hi
-    
-  } 
+  LocalTime currentTime = LocalTime.of(h, m);
 
+  if (alarmTime.compareTo(currentTime) > 0 && detectionStartTime.compareTo(currentTime) < 0) {
+    myPort.write(0);
+    //hi
+  }
 }
