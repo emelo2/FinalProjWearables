@@ -12,6 +12,8 @@ controlP5.Textarea  light, buzzer;
 CheckBox checkbox;
 controlP5.Textlabel REMStatus; 
 
+int numLs = 0;
+int numBs = 0;
 int frameNumber = 0;
 float maxLastTen = -1;
 LocalTime alarmTime;
@@ -25,7 +27,7 @@ String textValue = "";
 HashMap<String, Integer> colors;
 int hours, min;
 
-boolean rem = false, isAfterRem = false, alarmSet = true, sendTrigger = false, buzzerCheckbox = false, lightCheckbox = false;
+boolean rem = false, isAfterRem = false, alarmSet = true, sendLightTrigger = false, sendBuzzerTrigger = false, buzzerCheckbox = false, lightCheckbox = false;
 int endBlockHour;
 int endBlockMin;
 LocalTime detectionStartTime;
@@ -36,6 +38,7 @@ void setup () {
   if ( use_file ) {
     try {
       use_file = reader.ready();
+      myPort = new Serial(this, Serial.list()[0], 9600);
       println("Using file");
     } catch (Exception e) {
       println("Error using file");
@@ -50,7 +53,6 @@ void setup () {
     myPort = new Serial(this, Serial.list()[0], 9600);
     myPort.bufferUntil('\n');
     } catch (Exception e) {
-      serialTxt.setText("NO SERIAL");
     }
    }
   frameRate(speedUp*5);
@@ -103,11 +105,15 @@ void setup () {
     m -= 60;
     h++;
   }
+  String minuteString = Integer.toString(m);
+  if (m < 10) {
+    minuteString = "0"+m;
+  }
   cp5.addTextfield("Time")
     .setPosition(950, 40)
     .setSize(150,30)
     .setAutoClear(false)
-    .setText(h+":"+m)
+    .setText(h+":"+minuteString)
     .setFont(font)
     .getCaptionLabel()
     .setFont(font)
@@ -134,7 +140,7 @@ void draw () {
   
   REMStatus.setText("Deep Sleep");
 
-  if (use_file) {
+  if (use_file && !sendBuzzerTrigger) {
     readFromFile();
   }
 
@@ -151,8 +157,8 @@ void draw () {
   frameNumber++;
 
   if (inByte > 600 && alarmSet){
+    sendLightTrigger = true;
     rem = true;
-    //myPort.write("w");
     isAfterRem = false;
     println("eye movement detected");
     REMStatus.setText("REM Cycle");
@@ -165,16 +171,22 @@ void draw () {
     println("rem may have ended");
   }
 
-  if (isAfterRem && (frameNumber - endOfRemTime >= 150)) {
-    println(frameNumber - endOfRemTime);
+  if (isAfterRem && (frameNumber - endOfRemTime >= 50)) {
+    //println(frameNumber - endOfRemTime);
     println("rem cycle ended");
     REMStatus.setText("REM Cycle Ended, WAKE UP!");
-    sendAlarmTrigger();
+    sendBuzzerTrigger = true;
   }
 
-  if( sendTrigger ){
-    // myPort.write("x");
-    println("Writing to arduino");
+  if (sendLightTrigger && lightCheckbox) {
+    if (numLs < 10)
+      sendLightTrigger();
+    numLs++;
+  }
+  if( sendBuzzerTrigger && buzzerCheckbox ){
+    if (numBs < 10)
+      sendBuzzerTrigger();
+    numBs++;
   }
 }
 
@@ -200,7 +212,7 @@ void serialEvent (Serial myPort) {
   // get the ASCII string:
   // get the ASCII string:
   String inString = myPort.readStringUntil('\n');
-  println("Received serial data: "+inString);
+  //println("Received serial data: "+inString);
   if (inString != null) {
     // trim off any whitespace:
     
@@ -275,16 +287,16 @@ public void setAlarm () {
   alarmSet = true;
 }
 
-public void sendAlarmTrigger () {
-  int h = hour();
-  int m = minute();
-  LocalTime currentTime = LocalTime.of(h,m);
-  println(currentTime);
-  //println(alarmTime);
-  
-  if(true && alarmTime.compareTo(currentTime)> 0 && detectionStartTime.compareTo(currentTime)< 0){
-    sendTrigger = true;
-    println("sending");
-    //hi
+public void sendLightTrigger () {
+  if (lightCheckbox) {
+    println("Writing 'l' to arduino");
+    myPort.write('l');
+  }
+}
+
+public void sendBuzzerTrigger () {
+  if (buzzerCheckbox) {
+    println("Writing 'b' to arduino");
+    myPort.write('b');
   }
 }
