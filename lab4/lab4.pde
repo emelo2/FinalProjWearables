@@ -147,6 +147,8 @@ void draw() {
   
   if (inByte >700 && alarmSet){
     rem = true;
+    afterRem = false;
+    println("alarm set and over 700");
     
   }
   
@@ -154,10 +156,13 @@ void draw() {
     rem = false;
     afterRem = true;
     time2 = time.millis();
+    println("maybe not in rem");
   }
   ;
-  if(afterRem && (time.millis() - time2 > 60) ){
+  if(afterRem && (time.millis() - time2 >= 60) ){
+    println(time.millis() - time2);
     sendAlarmTrigger();
+    println("after rem");
   
   }
   
